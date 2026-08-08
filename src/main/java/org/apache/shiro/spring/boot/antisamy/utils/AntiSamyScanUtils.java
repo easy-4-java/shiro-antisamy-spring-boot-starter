@@ -4,7 +4,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Pattern;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.shiro.spring.boot.antisamy.cache.AntiSamyWrapper;
@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * XSS扫描过滤工具
- * @author 		： <a href="https://github.com/hiwepy">hiwepy</a>
+ * @author [@Loong Wan](https://github.com/loong10k)
  */
 public class AntiSamyScanUtils {
 	
