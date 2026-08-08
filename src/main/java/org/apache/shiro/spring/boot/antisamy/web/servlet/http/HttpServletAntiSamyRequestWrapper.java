@@ -5,9 +5,9 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 
 import org.apache.shiro.spring.boot.antisamy.cache.AntiSamyWrapper;
 import org.apache.shiro.spring.boot.antisamy.utils.AntiSamyScanUtils;
@@ -15,7 +15,7 @@ import org.apache.shiro.spring.boot.antisamy.utils.XssScanUtils;
 
 /**
  * RichText XSS(Cross Site Scripting)，即跨站脚本攻击请求过滤
- * @author 		： <a href="https://github.com/hiwepy">hiwepy</a>
+ * @author [@Loong Wan](https://github.com/loong10k)
  */
 public class HttpServletAntiSamyRequestWrapper extends HttpServletRequestWrapper {
 
