@@ -17,7 +17,7 @@ package org.apache.shiro.spring.boot.antisamy.utils;
 
 /**
  * TODO
- * @author 		： <a href="https://github.com/hiwepy">hiwepy</a>
+ * @author [@Loong Wan](https://github.com/loong10k)
  */
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
