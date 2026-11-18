@@ -80,7 +80,7 @@ class HttpServletRequestAntisamyFilterTest {
         AntiSamyCacheManager cache = mock(AntiSamyCacheManager.class);
         AntisamyProperties props = new AntisamyProperties();
         props.setExcludePatterns(new String[]{"/assets/**"});
-        when(cache.getDefaultAntiSamyWrapper(props.getScanType(), props.getPolicyHeaders()))
+        when(cache.getXssAntiSamyWrapper(props.getDefaultPolicy(), props.getScanType(), props.getPolicyHeaders()))
                 .thenReturn(mock(AntiSamyWrapper.class));
         HttpServletRequestAntisamyFilter filter = new HttpServletRequestAntisamyFilter(cache, props);
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -92,7 +92,7 @@ class HttpServletRequestAntisamyFilterTest {
 
         verify(chain).doFilter(isA(HttpServletAntiSamyRequestWrapper.class), same(response));
         verify(chain).doFilter(same(excluded), same(response));
-        verify(cache).getDefaultAntiSamyWrapper(props.getScanType(), props.getPolicyHeaders());
+        verify(cache).getXssAntiSamyWrapper(props.getDefaultPolicy(), props.getScanType(), props.getPolicyHeaders());
         verifyNoMoreInteractions(cache);
     }
 
@@ -120,5 +120,42 @@ class HttpServletRequestAntisamyFilterTest {
     void testMatchesNoPatterns() {
         HttpServletRequestAntisamyFilter filter = createFilter();
         assertThat(filter.matches("/any/path", null)).isTrue();
+    }
+
+    @Test
+    void selectsConfiguredDefaultAfterPolicyDefinitionsAreCleared() throws Exception {
+        AntiSamyCacheManager cache = mock(AntiSamyCacheManager.class);
+        AntisamyProperties props = new AntisamyProperties();
+        props.setDefaultPolicy("classpath:custom-default.xml");
+        props.setPolicyDefinitions("[urls]\n/api/**=classpath:specific.xml");
+        AntiSamyWrapper wrapper = mock(AntiSamyWrapper.class);
+        when(cache.getXssAntiSamyWrapper("classpath:specific.xml", props.getScanType(), props.getPolicyHeaders()))
+                .thenReturn(wrapper);
+        when(cache.getXssAntiSamyWrapper("classpath:custom-default.xml", props.getScanType(), props.getPolicyHeaders()))
+                .thenReturn(wrapper);
+        HttpServletRequestAntisamyFilter filter = new HttpServletRequestAntisamyFilter(cache, props);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/search");
+
+        assertThat(filter.getAntiSamyWrapperForRequest(request)).isSameAs(wrapper);
+        props.setPolicyDefinitions("  # no policy overrides\n");
+        assertThat(filter.getAntiSamyWrapperForRequest(request)).isSameAs(wrapper);
+
+        verify(cache).getXssAntiSamyWrapper("classpath:specific.xml", props.getScanType(), props.getPolicyHeaders());
+        verify(cache).getXssAntiSamyWrapper("classpath:custom-default.xml", props.getScanType(), props.getPolicyHeaders());
+    }
+
+    @Test
+    void selectsConfiguredDefaultWhenNoPatternMatches() throws Exception {
+        AntiSamyCacheManager cache = mock(AntiSamyCacheManager.class);
+        AntisamyProperties props = new AntisamyProperties();
+        props.setDefaultPolicy("classpath:custom-default.xml");
+        props.setPolicyDefinitions("/private/**=classpath:specific.xml");
+        AntiSamyWrapper expected = mock(AntiSamyWrapper.class);
+        when(cache.getXssAntiSamyWrapper("classpath:custom-default.xml", props.getScanType(), props.getPolicyHeaders()))
+                .thenReturn(expected);
+        HttpServletRequestAntisamyFilter filter = new HttpServletRequestAntisamyFilter(cache, props);
+
+        assertThat(filter.getAntiSamyWrapperForRequest(new MockHttpServletRequest("GET", "/public/search")))
+                .isSameAs(expected);
     }
 }

@@ -150,7 +150,7 @@ public class HttpServletRequestAntisamyFilter extends AccessControlFilter {
 				return antiSamyCacheManager.getXssAntiSamyWrapper(policy, properties.getScanType(), properties.getPolicyHeaders());
 			}
 		}
-		return antiSamyCacheManager.getDefaultAntiSamyWrapper(properties.getScanType(), properties.getPolicyHeaders());
+		return antiSamyCacheManager.getXssAntiSamyWrapper(properties.getDefaultPolicy(), properties.getScanType(), properties.getPolicyHeaders());
 	}
 	
 	/**

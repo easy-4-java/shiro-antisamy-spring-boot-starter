@@ -18,9 +18,11 @@ package org.apache.shiro.spring.boot.antisamy;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.shiro.spring.boot.antisamy.config.Ini;
 import org.apache.shiro.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 /**
  * TODO
@@ -97,13 +99,17 @@ public class AntisamyProperties {
 	 * @param policyMappings the policyMappings
 	 */
 	public void setPolicyMappings(Map<String, String> policyMappings) {
-		this.policyMappings = policyMappings;
+		this.policyMappings = Objects.isNull(policyMappings) ? new HashMap<>() : policyMappings;
 	}
 
 	/** Sets the policy definitions.
 	 * @param policyDefinitions the policyDefinitions
 	 */
 	public void setPolicyDefinitions(String policyDefinitions) {
+		if (!StringUtils.hasText(policyDefinitions)) {
+			setPolicyMappings(new HashMap<>());
+			return;
+		}
 		try {
 			Ini ini = new Ini();
 			ini.load(policyDefinitions);
