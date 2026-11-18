@@ -20,6 +20,7 @@ package org.apache.shiro.spring.boot.antisamy.utils;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -742,42 +743,15 @@ class Entities {
         }
 
         /**
-         * Performs a binary search of the entity array for the specified key. This method is based on code in
-         * {@link java.util.Arrays}.
-         * 
-         * @param key
-         *            the key to be found
-         * @return the index of the entity array matching the specified key
-         */
-        private int binarySearch(int key) {
-            int low = 0;
-            int high = size - 1;
-
-            while (low <= high) {
-                int mid = (low + high) >>> 1;
-                int midVal = values[mid];
-
-                if (midVal < key) {
-                    low = mid + 1;
-                } else if (midVal > key) {
-                    high = mid - 1;
-                } else {
-                    return mid; // key found
-                }
-            }
-            return -(low + 1); // key not found.
-        }
-
-        /**
          * {@inheritDoc}
          */
         public void add(String name, int value) {
-            ensureCapacity(size + 1);
-            int insertAt = binarySearch(value);
-            if (insertAt > 0) {
+            int insertAt = Arrays.binarySearch(values, 0, size, value);
+            if (insertAt >= 0) {
                 return; // note: this means you can't insert the same value twice
             }
-            insertAt = -(insertAt + 1); // binarySearch returns it negative and off-by-one
+            ensureCapacity(size + 1);
+            insertAt = -insertAt - 1;
             System.arraycopy(values, insertAt, values, insertAt + 1, size - insertAt);
             values[insertAt] = value;
             System.arraycopy(names, insertAt, names, insertAt + 1, size - insertAt);
@@ -789,7 +763,7 @@ class Entities {
          * {@inheritDoc}
          */
         public String name(int value) {
-            int index = binarySearch(value);
+            int index = Arrays.binarySearch(values, 0, size, value);
             if (index < 0) {
                 return null;
             }

@@ -2,16 +2,21 @@ package org.apache.shiro.spring.boot.antisamy.web.filter;
 
 import org.apache.shiro.spring.boot.antisamy.AntisamyProperties;
 import org.apache.shiro.spring.boot.antisamy.cache.AntiSamyCacheManager;
+import org.apache.shiro.spring.boot.antisamy.cache.AntiSamyWrapper;
+import org.apache.shiro.spring.boot.antisamy.web.servlet.http.HttpServletAntiSamyRequestWrapper;
 import org.apache.shiro.spring.boot.antisamy.cache.PolicyCacheManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 
-import javax.servlet.FilterChain;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -21,7 +26,7 @@ import static org.mockito.Mockito.*;
 class HttpServletRequestAntisamyFilterTest {
 
     private HttpServletRequestAntisamyFilter createFilter() {
-        ResourcePatternResolver resolver = mock(ResourcePatternResolver.class);
+        ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
         PolicyCacheManager policyCacheManager = PolicyCacheManager.getInstance(resolver);
         AntiSamyCacheManager cacheManager = AntiSamyCacheManager.getInstance(policyCacheManager);
         AntisamyProperties properties = new AntisamyProperties();
@@ -72,6 +77,27 @@ class HttpServletRequestAntisamyFilterTest {
     }
 
     @Test
+    void wrapsMatchingJakartaRequestAndPassesExcludedRequestThrough() throws Exception {
+        AntiSamyCacheManager cache = mock(AntiSamyCacheManager.class);
+        AntisamyProperties props = new AntisamyProperties();
+        props.setExcludePatterns(new String[]{"/assets/**"});
+        when(cache.getXssAntiSamyWrapper(props.getDefaultPolicy(), props.getScanType(), props.getPolicyHeaders()))
+                .thenReturn(mock(AntiSamyWrapper.class));
+        HttpServletRequestAntisamyFilter filter = new HttpServletRequestAntisamyFilter(cache, props);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+
+        filter.executeChain(new MockHttpServletRequest("GET", "/api/search"), response, chain);
+        MockHttpServletRequest excluded = new MockHttpServletRequest("GET", "/assets/logo.png");
+        filter.executeChain(excluded, response, chain);
+
+        verify(chain).doFilter(isA(HttpServletAntiSamyRequestWrapper.class), same(response));
+        verify(chain).doFilter(same(excluded), same(response));
+        verify(cache).getXssAntiSamyWrapper(props.getDefaultPolicy(), props.getScanType(), props.getPolicyHeaders());
+        verifyNoMoreInteractions(cache);
+    }
+
+    @Test
     @DisplayName("matches with include patterns")
     void testMatchesIncludePatterns() {
         HttpServletRequestAntisamyFilter filter = createFilter();
@@ -95,5 +121,42 @@ class HttpServletRequestAntisamyFilterTest {
     void testMatchesNoPatterns() {
         HttpServletRequestAntisamyFilter filter = createFilter();
         assertThat(filter.matches("/any/path", null)).isTrue();
+    }
+
+    @Test
+    void selectsConfiguredDefaultAfterPolicyDefinitionsAreCleared() throws Exception {
+        AntiSamyCacheManager cache = mock(AntiSamyCacheManager.class);
+        AntisamyProperties props = new AntisamyProperties();
+        props.setDefaultPolicy("classpath:custom-default.xml");
+        props.setPolicyDefinitions("[urls]\n/api/**=classpath:specific.xml");
+        AntiSamyWrapper wrapper = mock(AntiSamyWrapper.class);
+        when(cache.getXssAntiSamyWrapper("classpath:specific.xml", props.getScanType(), props.getPolicyHeaders()))
+                .thenReturn(wrapper);
+        when(cache.getXssAntiSamyWrapper("classpath:custom-default.xml", props.getScanType(), props.getPolicyHeaders()))
+                .thenReturn(wrapper);
+        HttpServletRequestAntisamyFilter filter = new HttpServletRequestAntisamyFilter(cache, props);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/search");
+
+        assertThat(filter.getAntiSamyWrapperForRequest(request)).isSameAs(wrapper);
+        props.setPolicyDefinitions("  # no policy overrides\n");
+        assertThat(filter.getAntiSamyWrapperForRequest(request)).isSameAs(wrapper);
+
+        verify(cache).getXssAntiSamyWrapper("classpath:specific.xml", props.getScanType(), props.getPolicyHeaders());
+        verify(cache).getXssAntiSamyWrapper("classpath:custom-default.xml", props.getScanType(), props.getPolicyHeaders());
+    }
+
+    @Test
+    void selectsConfiguredDefaultWhenNoPatternMatches() throws Exception {
+        AntiSamyCacheManager cache = mock(AntiSamyCacheManager.class);
+        AntisamyProperties props = new AntisamyProperties();
+        props.setDefaultPolicy("classpath:custom-default.xml");
+        props.setPolicyDefinitions("/private/**=classpath:specific.xml");
+        AntiSamyWrapper expected = mock(AntiSamyWrapper.class);
+        when(cache.getXssAntiSamyWrapper("classpath:custom-default.xml", props.getScanType(), props.getPolicyHeaders()))
+                .thenReturn(expected);
+        HttpServletRequestAntisamyFilter filter = new HttpServletRequestAntisamyFilter(cache, props);
+
+        assertThat(filter.getAntiSamyWrapperForRequest(new MockHttpServletRequest("GET", "/public/search")))
+                .isSameAs(expected);
     }
 }

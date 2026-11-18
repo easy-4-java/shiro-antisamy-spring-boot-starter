@@ -1,6 +1,7 @@
 package org.apache.shiro.spring.boot.antisamy.cache;
 
 import java.io.File;
+import java.io.InputStream;
 import java.net.URL;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -46,7 +47,7 @@ public class PolicyCacheManager {
 		return singleton;
 	}
 	
-	private PolicyCacheManager(ResourcePatternResolver resourceResolver){
+	PolicyCacheManager(ResourcePatternResolver resourceResolver){
 		this.resourceResolver = resourceResolver;
 	}
 	
@@ -65,12 +66,15 @@ public class PolicyCacheManager {
 				return null;
 			}
 			
-			Policy ret = COMPLIED_POLICY.get(resource.getURL().getPath());
+			String cacheKey = "resource:" + resource.getURL().toExternalForm();
+			Policy ret = COMPLIED_POLICY.get(cacheKey);
 			if (ret != null) {
 				return ret;
 			}
-			ret = Policy.getInstance(resource.getInputStream());
-			Policy existing = COMPLIED_POLICY.putIfAbsent(resource.getURL().getPath(), ret);
+			try (InputStream input = resource.getInputStream()) {
+				ret = Policy.getInstance(input);
+			}
+			Policy existing = COMPLIED_POLICY.putIfAbsent(cacheKey, ret);
 			if (existing != null) {
 				ret = existing;
 			}
@@ -89,12 +93,13 @@ public class PolicyCacheManager {
 			if(url == null){
 				return null;
 			}
-			Policy ret = COMPLIED_POLICY.get(url.toString());
+			String cacheKey = "url:" + url.toExternalForm();
+			Policy ret = COMPLIED_POLICY.get(cacheKey);
 			if (ret != null) {
 				return ret;
 			}
 			ret = Policy.getInstance(url);
-			Policy existing = COMPLIED_POLICY.putIfAbsent(url.getPath(), ret);
+			Policy existing = COMPLIED_POLICY.putIfAbsent(cacheKey, ret);
 			if (existing != null) {
 				ret = existing;
 			}
@@ -116,12 +121,13 @@ public class PolicyCacheManager {
 			if(policy == null || !policy.exists() || !policy.isFile()){
 				return null;
 			}
-			Policy ret = COMPLIED_POLICY.get(policy.getName());
+			String cacheKey = "file:" + policy.getAbsolutePath();
+			Policy ret = COMPLIED_POLICY.get(cacheKey);
 			if (ret != null) {
 				return ret;
 			}
 			ret = Policy.getInstance(policy);
-			Policy existing = COMPLIED_POLICY.putIfAbsent(policy.getName(), ret);
+			Policy existing = COMPLIED_POLICY.putIfAbsent(cacheKey, ret);
 			if (existing != null) {
 				ret = existing;
 			}

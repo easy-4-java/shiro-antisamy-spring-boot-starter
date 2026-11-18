@@ -15,10 +15,23 @@
  */
 package org.apache.shiro.spring.boot;
 
+import jakarta.servlet.http.HttpServletRequest;
+
+import org.apache.shiro.mgt.SecurityManager;
+import org.apache.shiro.spring.boot.antisamy.web.filter.HttpServletRequestAntisamyFilter;
+import org.apache.shiro.spring.boot.antisamy.web.servlet.http.HttpServletAntiSamyRequestWrapper;
+import org.apache.shiro.spring.web.config.DefaultShiroFilterChainDefinition;
+import org.apache.shiro.spring.web.config.ShiroFilterChainDefinition;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 /**
  * Unit tests for {{ @link ShiroAntisamyWebFilterConfiguration }}.
@@ -29,10 +42,42 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("ShiroAntisamyWebFilterConfiguration Tests")
 class ShiroAntisamyWebFilterConfigurationTest {
 
+    private final WebApplicationContextRunner contextRunner = new WebApplicationContextRunner()
+            .withUserConfiguration(BootConfiguration.class)
+            .withBean(SecurityManager.class, () -> mock(SecurityManager.class))
+            .withBean(ShiroFilterChainDefinition.class, DefaultShiroFilterChainDefinition::new);
+
     @Test
-    @DisplayName("Instance can be created via constructor")
-    void testInstantiation() {
-        ShiroAntisamyWebFilterConfiguration instance = new ShiroAntisamyWebFilterConfiguration();
-        assertThat(instance).isNotNull();
+    void bootDiscoversFilterWhenEnabled() {
+        contextRunner.withPropertyValues("shiro.antisamy.enabled=true")
+                .run(context -> {
+                    assertThat(context).hasSingleBean(HttpServletRequestAntisamyFilter.class);
+                    assertThat(context).hasBean("antisamy");
+                });
+    }
+
+    @Test
+    void enabledFilterLoadsBundledPolicyOnFirstRequest() {
+        contextRunner.withPropertyValues("shiro.antisamy.enabled=true")
+                .run(context -> {
+                    HttpServletRequestAntisamyFilter filter = context.getBean(HttpServletRequestAntisamyFilter.class);
+                    MockHttpServletRequest request = new MockHttpServletRequest("GET", "/search");
+                    request.addParameter("query", "safe text");
+
+                    filter.doFilter(request, new MockHttpServletResponse(), (filteredRequest, response) -> {
+                        assertThat(filteredRequest).isInstanceOf(HttpServletAntiSamyRequestWrapper.class);
+                        assertThat(((HttpServletRequest) filteredRequest).getParameter("query")).isEqualTo("safe text");
+                    });
+                });
+    }
+
+    @Test
+    void bootLeavesFilterDisabledByDefault() {
+        contextRunner.run(context -> assertThat(context).doesNotHaveBean(HttpServletRequestAntisamyFilter.class));
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableAutoConfiguration
+    static class BootConfiguration {
     }
 }

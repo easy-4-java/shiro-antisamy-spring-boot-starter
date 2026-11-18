@@ -1,13 +1,14 @@
 package org.apache.shiro.spring.boot.antisamy.web.servlet.http;
 
+import java.util.Collections;
 import java.util.Enumeration;
-import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Objects;
 
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 
 import org.apache.shiro.spring.boot.antisamy.cache.AntiSamyWrapper;
 import org.apache.shiro.spring.boot.antisamy.utils.AntiSamyScanUtils;
@@ -38,17 +39,9 @@ public class HttpServletAntiSamyRequestWrapper extends HttpServletRequestWrapper
 	 * @return the result
 	 */
 	public Map<String, String[]> getParameterMap() {
-		Map<String, String[]> request_map = super.getParameterMap();
-		Iterator<Entry<String, String[]>> iterator = request_map.entrySet().iterator();
-		while (iterator.hasNext()) {
-			Entry<String, String[]> me = iterator.next();
-			String[] values = (String[]) me.getValue();
-			for (int i = 0; i < values.length; i++) {
-				// /System.out.println(values[i]);
-				values[i] = xssClean(values[i]);
-			}
-		}
-		return request_map;
+		Map<String, String[]> cleanedParameters = new LinkedHashMap<>();
+		super.getParameterMap().forEach((name, values) -> cleanedParameters.put(name, cleanParameterValues(values)));
+		return Collections.unmodifiableMap(cleanedParameters);
 	}
 
 	@Override
@@ -57,8 +50,11 @@ public class HttpServletAntiSamyRequestWrapper extends HttpServletRequestWrapper
 	 * @return the result
 	 */
 	public String[] getParameterValues(String name) {
-		String[] rawValues = super.getParameterValues(name);
-		if (rawValues == null){
+		return cleanParameterValues(super.getParameterValues(name));
+	}
+
+	private String[] cleanParameterValues(String[] rawValues) {
+		if (Objects.isNull(rawValues)) {
 			return null;
 		}
 		String[] cleanedValues = new String[rawValues.length];
@@ -115,13 +111,16 @@ public class HttpServletAntiSamyRequestWrapper extends HttpServletRequestWrapper
 	 */
 	public Cookie[] getCookies() {
 		Cookie[] existingCookies = super.getCookies();
-		if (existingCookies != null) {
-			for (int i = 0; i < existingCookies.length; ++i) {
-				Cookie cookie = existingCookies[i];
-				cookie.setValue(xssClean(cookie.getValue()));
-			}
+		if (Objects.isNull(existingCookies)) {
+			return null;
 		}
-		return existingCookies;
+		Cookie[] cleanedCookies = new Cookie[existingCookies.length];
+		for (int i = 0; i < existingCookies.length; i++) {
+			Cookie cookie = (Cookie) existingCookies[i].clone();
+			cookie.setValue(xssClean(cookie.getValue()));
+			cleanedCookies[i] = cookie;
+		}
+		return cleanedCookies;
 	}
 
 	@Override

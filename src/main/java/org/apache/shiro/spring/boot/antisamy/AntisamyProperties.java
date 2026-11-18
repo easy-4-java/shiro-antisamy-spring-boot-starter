@@ -18,9 +18,11 @@ package org.apache.shiro.spring.boot.antisamy;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.shiro.spring.boot.antisamy.config.Ini;
 import org.apache.shiro.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 /**
  * TODO
@@ -29,7 +31,7 @@ import org.apache.shiro.util.CollectionUtils;
  */
 public class AntisamyProperties {
 
-	public static final String DEFAULT_POLICY = "classpath*:antisamy-policy.xml";
+	public static final String DEFAULT_POLICY = "classpath:antisamy-shiro.xml";
 	
 	/** 扫描器类型，0：DOM类型扫描器,1:SAX类型扫描器；两者的区别如同XML解析中DOM解析与Sax解析区别相同，实际上就是对两种解析方式的实现*/
 	protected int scanType = 1;
@@ -97,13 +99,17 @@ public class AntisamyProperties {
 	 * @param policyMappings the policyMappings
 	 */
 	public void setPolicyMappings(Map<String, String> policyMappings) {
-		this.policyMappings = policyMappings;
+		this.policyMappings = Objects.isNull(policyMappings) ? new HashMap<>() : policyMappings;
 	}
 
 	/** Sets the policy definitions.
 	 * @param policyDefinitions the policyDefinitions
 	 */
 	public void setPolicyDefinitions(String policyDefinitions) {
+		if (!StringUtils.hasText(policyDefinitions)) {
+			setPolicyMappings(new HashMap<>());
+			return;
+		}
 		try {
 			Ini ini = new Ini();
 			ini.load(policyDefinitions);

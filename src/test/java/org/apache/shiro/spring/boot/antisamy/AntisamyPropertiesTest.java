@@ -78,7 +78,7 @@ class AntisamyPropertiesTest {
     @Test
     @DisplayName("DEFAULT_POLICY has expected value")
     void testDEFAULT_POLICYConstant() {
-        assertThat(AntisamyProperties.DEFAULT_POLICY).isEqualTo("classpath*:antisamy-policy.xml");
+        assertThat(AntisamyProperties.DEFAULT_POLICY).isEqualTo("classpath:antisamy-shiro.xml");
     }
 
     @Test

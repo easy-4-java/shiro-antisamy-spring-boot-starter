@@ -57,10 +57,10 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <!-- Third-Party Dependencies -->
-        <commons-text.version>1.4</commons-text.version>
+        <commons-text.version>1.15.0</commons-text.version>
         <owasp-antisamy.version>1.5.10</owasp-antisamy.version>
         <owasp-encoder.version>1.2.2</owasp-encoder.version>
-        <shiro-biz.version>3.0.x.20260630-SNAPSHOT</shiro-biz.version>
+        <shiro.version>3.0.2</shiro.version>
         <!-- Maven Plugin Dependencies -->
         <maven-antrun-plugin.version>3.1.0</maven-antrun-plugin.version>
         <maven-central-publishing-plugin.version>0.11.0</maven-central-publishing-plugin.version>
@@ -89,12 +89,6 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>javax.servlet</groupId>
-                <artifactId>javax.servlet-api</artifactId>
-                <version>${javax.servlet-api.version}</version>
-                <optional>true</optional>
-            </dependency>
-            <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>${slf4j.version}</version>
@@ -115,12 +109,14 @@
             <artifactId>jakarta.servlet-api</artifactId>
             <optional>true</optional>
         </dependency>
-        <!-- For Servlet Api (javax for Shiro compatibility) -->
         <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>javax.servlet-api</artifactId>
-            <version>4.0.1</version>
-            <optional>true</optional>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-text</artifactId>
+            <version>${commons-text.version}</version>
         </dependency>
 
         <!-- For Slf4j -->
@@ -195,11 +191,10 @@
             <version>${owasp-encoder.version}</version>
         </dependency>
 
-        <!-- Source: https://github.com/easy-4-java/shiro-biz — easy4j shiro-biz -->
         <dependency>
-            <groupId>io.github.easy4j</groupId>
-            <artifactId>shiro-biz</artifactId>
-            <version>${shiro-biz.version}</version>
+            <groupId>org.apache.shiro</groupId>
+            <artifactId>shiro-spring</artifactId>
+            <version>${shiro.version}</version>
         </dependency>
     </dependencies>
 

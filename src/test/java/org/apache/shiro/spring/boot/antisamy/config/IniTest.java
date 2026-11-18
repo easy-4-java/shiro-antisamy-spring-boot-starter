@@ -1,9 +1,15 @@
 package org.apache.shiro.spring.boot.antisamy.config;
 
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 @DisplayName("Ini Tests")
 class IniTest {
@@ -124,9 +130,10 @@ class IniTest {
     @DisplayName("load handles multi-line values")
     void testMultiLineValues() throws Exception {
         Ini ini = new Ini();
-        ini.load("[urls]\n/test = anon\n/login = authc\n");
-        Ini.Section section = ini.getSection("urls");
-        assertThat(section.size()).isEqualTo(2);
+        String continued = "[urls]\n/search = classpath:policies/" + '\\' + "\n  search.xml\n";
+        ini.load(continued);
+
+        assertThat(ini.getSectionProperty("urls", "/search")).isEqualTo("classpath:policies/search.xml");
     }
 
     @Test
@@ -195,4 +202,42 @@ class IniTest {
         section.clear();
         assertThat(section.isEmpty()).isTrue();
     }
+    @Test
+    void loadsUtf8PolicyNamesAndClosesInputStream() throws Exception {
+        Ini ini = new Ini();
+        byte[] content = "[urls]\n/产品/** = classpath:策略.xml\n".getBytes(StandardCharsets.UTF_8);
+        ByteArrayInputStream input = spy(new ByteArrayInputStream(content));
+
+        ini.load(input);
+
+        assertThat(ini.getSectionProperty("urls", "/产品/**")).isEqualTo("classpath:策略.xml");
+        verify(input).close();
+    }
+
+    @Test
+    void copiesNamedAndDefaultSectionsIndependently() {
+        Ini defaults = new Ini();
+        defaults.setSectionProperty(null, "/**", "classpath:default.xml");
+        defaults.setSectionProperty(" urls ", "/health", "classpath:health.xml");
+        Ini copy = new Ini(defaults);
+
+        assertThat(copy).isEqualTo(defaults);
+        assertThat(copy.hashCode()).isEqualTo(defaults.hashCode());
+        assertThat(copy.toString()).isEqualTo("sections=<default>,urls");
+        assertThat(copy.getSectionProperty("urls", "/missing", "fallback")).isEqualTo("fallback");
+        copy.setSectionProperty("urls", "/health", "classpath:override.xml");
+        assertThat(copy.getSectionProperty("urls", "/health", "fallback")).isEqualTo("classpath:override.xml");
+        assertThat(copy.removeSection(" urls ")).containsEntry("/health", "classpath:override.xml");
+        assertThat(copy).doesNotContainKey("urls");
+        assertThat(defaults.getSectionProperty("urls", "/health")).isEqualTo("classpath:health.xml");
+        assertThat(copy.getSectionProperty("", "/**")).isEqualTo("classpath:default.xml");
+    }
+
+    @Test
+    void rejectsPolicyMappingsWithoutAValue() {
+        Ini ini = new Ini();
+
+        assertThatIllegalArgumentException().isThrownBy(() -> ini.load("[urls]\n/health=\n"));
+    }
+
 }
