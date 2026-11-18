@@ -2,6 +2,14 @@ package org.apache.shiro.spring.boot.antisamy.cache;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.owasp.validator.html.Policy;
+
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourcePatternResolver;
 
@@ -89,5 +97,40 @@ class PolicyCacheManagerTest {
         PolicyCacheManager manager = PolicyCacheManager.getInstance(resolver);
         manager.destroy();
         assertThat(PolicyCacheManager.COMPLIED_POLICY).isEmpty();
+    }
+
+    @Test
+    void sameNamedPolicyFilesKeepTheirOwnDirectives(@TempDir Path directory) throws Exception {
+        Path first = writePolicy(Files.createDirectory(directory.resolve("first")), "2000");
+        Path second = writePolicy(Files.createDirectory(directory.resolve("second")), "3000");
+        PolicyCacheManager manager = PolicyCacheManager.getInstance(mock(ResourcePatternResolver.class));
+
+        Policy firstPolicy = manager.getXssPolicy(first.toFile());
+        Policy secondPolicy = manager.getXssPolicy(second.toFile());
+        assertThat(firstPolicy.getDirective("maxInputSize")).isEqualTo("2000");
+        assertThat(secondPolicy.getDirective("maxInputSize")).isEqualTo("3000");
+        assertThat(manager.getXssPolicy(second.toFile())).isSameAs(secondPolicy);
+    }
+
+    @Test
+    void repeatedUrlLookupReturnsCachedPolicyUntilDestroy(@TempDir Path directory) throws Exception {
+        Path file = writePolicy(directory, "2000");
+        URL url = file.toUri().toURL();
+        PolicyCacheManager manager = PolicyCacheManager.getInstance(mock(ResourcePatternResolver.class));
+
+        Policy first = manager.getXssPolicy(url);
+        Files.delete(file);
+        assertThat(manager.getXssPolicy(url)).isSameAs(first);
+        manager.destroy();
+        writePolicy(directory, "3000");
+        assertThat(manager.getXssPolicy(url).getDirective("maxInputSize")).isEqualTo("3000");
+    }
+
+    private static Path writePolicy(Path directory, String maxInputSize) throws Exception {
+        try (InputStream input = PolicyCacheManagerTest.class.getResourceAsStream("/antisamy-policy-test.xml")) {
+            String xml = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+            return Files.writeString(directory.resolve("policy.xml"),
+                xml.replace("name=\"maxInputSize\" value=\"2000\"", "name=\"maxInputSize\" value=\"" + maxInputSize + "\""));
+        }
     }
 }
