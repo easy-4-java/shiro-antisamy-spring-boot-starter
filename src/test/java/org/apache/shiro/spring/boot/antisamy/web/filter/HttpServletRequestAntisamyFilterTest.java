@@ -7,6 +7,7 @@ import org.apache.shiro.spring.boot.antisamy.web.servlet.http.HttpServletAntiSam
 import org.apache.shiro.spring.boot.antisamy.cache.PolicyCacheManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -25,7 +26,7 @@ import static org.mockito.Mockito.*;
 class HttpServletRequestAntisamyFilterTest {
 
     private HttpServletRequestAntisamyFilter createFilter() {
-        ResourcePatternResolver resolver = mock(ResourcePatternResolver.class);
+        ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
         PolicyCacheManager policyCacheManager = PolicyCacheManager.getInstance(resolver);
         AntiSamyCacheManager cacheManager = AntiSamyCacheManager.getInstance(policyCacheManager);
         AntisamyProperties properties = new AntisamyProperties();

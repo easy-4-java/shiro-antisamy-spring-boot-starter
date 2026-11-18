@@ -47,7 +47,7 @@ public class PolicyCacheManager {
 		return singleton;
 	}
 	
-	private PolicyCacheManager(ResourcePatternResolver resourceResolver){
+	PolicyCacheManager(ResourcePatternResolver resourceResolver){
 		this.resourceResolver = resourceResolver;
 	}
 	

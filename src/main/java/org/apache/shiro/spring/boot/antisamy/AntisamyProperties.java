@@ -31,7 +31,7 @@ import org.springframework.util.StringUtils;
  */
 public class AntisamyProperties {
 
-	public static final String DEFAULT_POLICY = "classpath*:antisamy-policy.xml";
+	public static final String DEFAULT_POLICY = "classpath:antisamy-shiro.xml";
 	
 	/** 扫描器类型，0：DOM类型扫描器,1:SAX类型扫描器；两者的区别如同XML解析中DOM解析与Sax解析区别相同，实际上就是对两种解析方式的实现*/
 	protected int scanType = 1;
